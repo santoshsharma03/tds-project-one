@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import base64
 import subprocess
 import difflib
+from dateutil.parser import parse
 
 # Load environment variables from .env file
 load_dotenv()
@@ -46,42 +47,57 @@ class TaskHandler:
     # Dispatcher: examines the task description and calls the corresponding handler.
     async def handle_task(self, task_description: str) -> Dict[str, Any]:
         lower_task = task_description.lower()
+        # Phase A tasks
         if "datagen" in lower_task or "generate data" in lower_task:
             return await self.handle_datagen(task_description)
         elif "format" in lower_task and "prettier" in lower_task:
             return await self.handle_format_file(task_description)
-        elif "wednesday" in lower_task and "date" in lower_task:
+        elif "wednesday" in lower_task:
             return await self.handle_count_wednesdays(task_description)
-        elif "sort contacts" in lower_task:
+        elif "contact" in lower_task and "sort" in lower_task:
             return await self.handle_sort_contacts(task_description)
-        elif "recent logs" in lower_task:
+        elif ("log" in lower_task and "recent" in lower_task) or ("first line" in lower_task and ".log" in lower_task):
             return await self.handle_recent_logs(task_description)
-        elif "extract headers" in lower_task:
+        elif ("markdown" in lower_task and "docs" in lower_task) or ("index.json" in lower_task):
             return await self.handle_extract_headers(task_description)
-        elif "extract email" in lower_task:
+        elif ("email" in lower_task and "sender" in lower_task) or ("email.txt" in lower_task and "extract" in lower_task):
             return await self.handle_extract_email(task_description)
-        elif "extract card" in lower_task:
+        elif ("credit" in lower_task and "card" in lower_task) or ("credit_card.png" in lower_task):
             return await self.handle_extract_card(task_description)
-        elif "similar comments" in lower_task or "most similar" in lower_task:
+        elif ("comment" in lower_task and "similar" in lower_task) or ("most similar" in lower_task):
             return await self.handle_similar_comments(task_description)
-        elif "ticket sales" in lower_task:
+        elif ("ticket" in lower_task and "gold" in lower_task) or ("ticket-sales.db" in lower_task):
             return await self.handle_ticket_sales(task_description)
+        # Phase B tasks
+        elif "fetch data" in lower_task or "api" in lower_task:
+            return await self.handle_fetch_api(task_description)
+        elif "clone" in lower_task or "git" in lower_task:
+            return await self.handle_git_operations(task_description)
+        elif "sql query" in lower_task or "run sql" in lower_task:
+            return await self.handle_run_sql(task_description)
+        elif "scrape" in lower_task or "extract website" in lower_task:
+            return await self.handle_scrape_website(task_description)
+        elif "resize image" in lower_task or "compress image" in lower_task:
+            return await self.handle_resize_image(task_description)
+        elif "transcribe audio" in lower_task:
+            return await self.handle_transcribe_audio(task_description)
+        elif "convert markdown" in lower_task or "md to html" in lower_task:
+            return await self.handle_md_to_html(task_description)
+        elif "filter csv" in lower_task:
+            return await self.handle_filter_csv(task_description)
         else:
             raise ValueError(f"Unknown task: {task_description}")
 
     # A1: Data Generation using external script
     async def handle_datagen(self, task_description: str) -> Dict[str, Any]:
-        # Get the user email from environment variable
         user_email = os.environ.get("USER_EMAIL")
         if not user_email:
             raise HTTPException(status_code=400, detail="USER_EMAIL environment variable not set")
-        # Download the datagen.py script
         datagen_url = "https://raw.githubusercontent.com/sanand0/tools-in-data-science-public/tds-2025-01/project-1/datagen.py"
         download_cmd = ["curl", "-fsSL", datagen_url, "-o", "/tmp/datagen.py"]
         result_download = subprocess.run(download_cmd, capture_output=True, text=True)
         if result_download.returncode != 0:
             raise HTTPException(status_code=500, detail=f"Failed to download datagen.py: {result_download.stderr}")
-        # Run the datagen.py script with the user's email
         run_cmd = ["python", "/tmp/datagen.py", user_email]
         result_run = subprocess.run(run_cmd, capture_output=True, text=True)
         if result_run.returncode != 0:
@@ -109,18 +125,16 @@ class TaskHandler:
                 if not line:
                     continue
                 try:
-                    # Try parsing the date; adjust the format if needed.
-                    dt = datetime.strptime(line, "%Y-%m-%d")
-                    if dt.weekday() == 2:  # Monday=0, Tuesday=1, Wednesday=2
+                    dt = parse(line)  # Using dateutil.parser.parse for flexible date parsing
+                    if dt.weekday() == 2:
                         count += 1
                 except Exception as e:
-                    # If date parsing fails, skip the line
                     continue
         with open(output_file, 'w') as f:
             f.write(str(count))
         return {"status": "success", "wednesdays_count": count}
 
-    # A4: Sort Contacts (already implemented)
+    # A4: Sort Contacts
     async def handle_sort_contacts(self, task_description: str) -> Dict[str, Any]:
         input_file = "/data/contacts.json"
         output_file = "/data/contacts-sorted.json"
@@ -133,7 +147,7 @@ class TaskHandler:
             json.dump(sorted_contacts, f, indent=2)
         return {"status": "success", "contacts_sorted": len(sorted_contacts)}
 
-    # A5: Recent Logs (already implemented)
+    # A5: Recent Logs
     async def handle_recent_logs(self, task_description: str) -> Dict[str, Any]:
         log_dir = "/data/logs/"
         output_file = "/data/logs-recent.txt"
@@ -147,7 +161,7 @@ class TaskHandler:
             f.write("\n".join(first_lines))
         return {"status": "success", "logs_processed": len(first_lines)}
 
-    # A6: Extract Headers from Markdown files (already implemented)
+    # A6: Extract Headers from Markdown files
     async def handle_extract_headers(self, task_description: str) -> Dict[str, Any]:
         docs_dir = "/data/docs/"
         output_file = "/data/docs/index.json"
@@ -164,7 +178,7 @@ class TaskHandler:
             json.dump(headers, f, indent=2)
         return {"status": "success", "files_processed": len(headers)}
 
-    # A7: Extract Email (already implemented)
+    # A7: Extract Email
     async def handle_extract_email(self, task_description: str) -> Dict[str, Any]:
         input_file = "/data/email.txt"
         output_file = "/data/email-sender.txt"
@@ -178,10 +192,10 @@ class TaskHandler:
             f.write(email.strip())
         return {"status": "success", "email": email.strip()}
 
-    # A8: Extract Card (already implemented)
+    # A8: Extract Card
     async def handle_extract_card(self, task_description: str) -> Dict[str, Any]:
-        input_file = "/data/credit-card.png"
-        output_file = "/data/credit-card.txt"
+        input_file = "/data/credit_card.png"
+        output_file = "/data/credit_card.txt"
         if not os.path.exists(input_file):
             raise HTTPException(status_code=404, detail=f"Input file not found: {input_file}")
         with open(input_file, 'rb') as f:
@@ -194,7 +208,7 @@ class TaskHandler:
             f.write(card_number)
         return {"status": "success", "card_number": card_number}
 
-    # A9: Find Most Similar Pair of Comments using a simple similarity measure
+    # A9: Find Most Similar Pair of Comments
     async def handle_similar_comments(self, task_description: str) -> Dict[str, Any]:
         input_file = "/data/comments.txt"
         output_file = "/data/comments-similar.txt"
@@ -216,7 +230,7 @@ class TaskHandler:
             f.write(best_pair[0] + "\n" + best_pair[1])
         return {"status": "success", "similarity_ratio": best_ratio}
 
-    # A10: Calculate Ticket Sales (already implemented)
+    # A10: Calculate Ticket Sales
     async def handle_ticket_sales(self, task_description: str) -> Dict[str, Any]:
         db_file = "/data/ticket-sales.db"
         output_file = "/data/ticket-sales-gold.txt"
