@@ -2,14 +2,14 @@
 FROM python:3.10-slim
 
 # Install system dependencies including nodejs and npm for Prettier
+
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
-    curl \
     nodejs \
     npm \
-    && npm install -g npx \
     && rm -rf /var/lib/apt/lists/*
-
+    
 # Set working directory
 WORKDIR /app
 
