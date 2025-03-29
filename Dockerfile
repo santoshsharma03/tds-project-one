@@ -23,8 +23,8 @@ COPY . .
 # Create data directory
 RUN mkdir -p /data
 
-# Expose port for FastAPI
-EXPOSE 8000
+# Expose ports for FastAPI
+EXPOSE 8000 8080
 
 # Run the application using uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
